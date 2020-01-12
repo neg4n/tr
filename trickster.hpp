@@ -72,6 +72,39 @@ namespace trickster {
       return std::nullopt;
     }
 
+    /**
+     * Get process modules.
+     * @param processId id of the process.
+     * @return std::vector containing modules as its entries, it is good
+     * to check if returned vector is not empty because it means that process
+     * with id provided in function call does not exist.
+     */
+    inline std::vector<std::string> getProcessModules(const int processId) noexcept {
+      std::vector<std::string> modules;
+      for (const auto& process : std::filesystem::directory_iterator("/proc/")) {
+        if (!process.is_directory())
+          continue;
+
+        if (!internal::onlyDigits(process.path().string().erase(0, 6)))
+          continue;
+
+        if (process.path().string().erase(0, 6) == std::to_string(processId)) {
+          std::string line;
+          std::ifstream processMapFileStream(process.path() / "maps");
+          if (processMapFileStream.is_open()) {
+            while (std::getline(processMapFileStream, line))
+              if (line.find(".so") != std::string::npos)
+                modules.push_back(line.erase(0, 73));
+
+            std::sort(modules.begin(), modules.end());
+            modules.erase(std::unique(modules.begin(), modules.end()), modules.end());
+
+            return modules;
+          }
+        }
+      }
+      return {};
+    }
   } // namespace utils
 
   class Process {
@@ -94,6 +127,14 @@ namespace trickster {
      */
     [[nodiscard]] std::string getName() const noexcept { return this->m_name; }
 
+    /**
+     * Get process modules.
+     * @return std::vector containing modules as its entries, it is good
+     * to check if returned vector is not empty because it means that process
+     * with id provided in function call does not exist.
+     */
+    [[nodiscard]] std::vector<std::string> getProcessModules() const noexcept { return utils::getProcessModules(this->m_id); }
+    
     /**
      * Read process memory.
      * @param address starting address
