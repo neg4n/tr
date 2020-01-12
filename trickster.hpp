@@ -176,10 +176,10 @@ namespace trickster {
 
       local_iovec[ 0 ].iov_base = &data;
       local_iovec[ 0 ].iov_len = sizeof(Type);
-      remote_iovec[ 0 ].iov_base = (void*)address;
+      remote_iovec[ 0 ].iov_base = reinterpret_cast<void*>(address);
       remote_iovec[ 0 ].iov_len = sizeof(Type);
 
-      const auto result = process_vm_readv(this->m_id, local_iovec, 1, remote_iovec, 1, 0);
+      const auto result = process_vm_writev(this->m_id, local_iovec, 1, remote_iovec, 1, 0);
 
       if (result == -1) {
 #ifdef TRICKSTER_DEBUG
