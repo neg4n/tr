@@ -18,7 +18,7 @@
 #include <sys/uio.h>
 
 /**
- * trickster - an linux memory hacking library
+ * trickster - a linux memory hacking library
  * created by zxv77 (github.com/zxv77)
  *
  * version 1.0
