@@ -6,6 +6,12 @@ and embed `trickster.hpp` in source code of
 your application or use this repository as  
 [git submodule](https://git-scm.com/book/en/v2/Git-Tools-Submodules)
 
+#### Debugging
+To verify library code execution and see error messages, compile  
+your program with `-DTRICKSTER_DEBUG` compiler flag. (g++)
+
+#### Features
+
 `trickster` provides ability to:
 - Enumerate process modules.
 - Get process id by name.
@@ -20,7 +26,7 @@ your application or use this repository as
 
 int main() {
   // Create Process object.
-  std::shared_ptr<trickster::Process> testProcess = std::make_shared<trickster::Process>("test");
+  auto testProcess = std::make_shared<trickster::Process>("test");
   // Print process modules.
   for (const auto& module : testProcess->getProcessModules())
     std::cout << module << std::endl;
