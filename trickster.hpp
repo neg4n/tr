@@ -35,7 +35,7 @@ namespace trickster {
      * @param string string to check
      * @return true if only digits, false otherwise
      */
-    inline bool onlyDigits(std::string_view string) noexcept { return std::all_of(string.begin(), string.end(), ::isdigit); }
+    inline bool only_digits(std::string_view string) noexcept { return std::all_of(string.begin(), string.end(), ::isdigit); }
   } // namespace internal
 
   /**
@@ -47,25 +47,25 @@ namespace trickster {
   namespace utils {
     /**
      * Get process id by name.
-     * @param processName name of the process.
+     * @param process_name name of the process.
      * @return id of the process or std::nullopt if function fails.
      */
-    inline std::optional<int> getProcessIdByName(std::string_view processName) noexcept {
-      if (processName.empty())
+    inline std::optional<int> get_pid_by_name(std::string_view process_name) noexcept {
+      if (process_name.empty())
         return std::nullopt;
 
       for (const auto& process : std::filesystem::directory_iterator("/proc/")) {
         if (!process.is_directory())
           continue;
 
-        if (!internal::onlyDigits(process.path().string().erase(0, 6)))
+        if (!internal::only_digits(process.path().string().erase(0, 6)))
           continue;
 
         std::string line;
-        std::ifstream processNameFileSteam(process.path() / "comm");
-        if (processNameFileSteam.is_open()) {
-          std::getline(processNameFileSteam, line);
-          if (line == processName)
+        std::ifstream process_name_fs(process.path() / "comm");
+        if (process_name_fs.is_open()) {
+          std::getline(process_name_fs, line);
+          if (line == process_name)
             return std::stoi(process.path().string().erase(0, 6));
         }
       }
@@ -74,27 +74,28 @@ namespace trickster {
 
     /**
      * Get process modules.
-     * @param processId id of the process.
+     * @param pid process id.
      * @return std::vector containing modules as its entries, it is good
      * to check if returned vector is not empty because it means that process
      * with id provided in function call does not exist.
      */
     
     // String constructor may throw, thus the function is prone to only possibly be noexcept.
-    inline std::vector<std::string> getProcessModules(const int processId) noexcept(false) {
+    inline std::vector<std::string> get_process_modules(const int pid) noexcept(false) {
       std::vector<std::string> modules;
       for (const auto& process : std::filesystem::directory_iterator("/proc/")) {
         if (!process.is_directory())
           continue;
 
-        if (!internal::onlyDigits(process.path().string().erase(0, 6)))
+        if (!internal::only_digits(process.path().string().erase(0, 6)))
           continue;
 
-        if (process.path().string().erase(0, 6) == std::to_string(processId)) {
+        if (process.path().string().erase(0, 6) == std::to_string(pid)) {
           std::string line;
-          std::ifstream processMapFileStream(process.path() / "maps");
-          if (processMapFileStream.is_open()) {
-            while (std::getline(processMapFileStream, line))
+          std::ifstream process_memory_map_fs(process.path() / "maps");
+
+          if (process_memory_map_fs.is_open()) {
+            while (std::getline(process_memory_map_fs, line))
               if (line.find(".so") != std::string::npos)
                 modules.push_back(line.erase(0, 73));
 
@@ -115,19 +116,19 @@ namespace trickster {
     const std::string m_name;
 
   public:
-    Process(std::string_view processName) : m_id(utils::getProcessIdByName(processName).value()), m_name(processName){};
+    Process(std::string_view process_name) : m_id(utils::get_pid_by_name(process_name).value()), m_name(process_name){};
 
     /**
      * Get process id.
      * @return process id
      */
-    [[nodiscard]] int getId() const noexcept { return this->m_id; }
+    [[nodiscard]] int get_id() const noexcept { return this->m_id; }
 
     /**
      * Get process name.
      * @return process name.
      */
-    [[nodiscard]] std::string getName() const noexcept { return this->m_name; }
+    [[nodiscard]] std::string get_name() const noexcept { return this->m_name; }
 
     /**
      * Get process modules.
@@ -135,14 +136,14 @@ namespace trickster {
      * to check if returned vector is not empty because it means that process
      * with id provided in function call does not exist.
      */
-    [[nodiscard]] std::vector<std::string> getProcessModules() const noexcept { return utils::getProcessModules(this->m_id); }
+    [[nodiscard]] std::vector<std::string> get_modules() const noexcept { return utils::get_process_modules(this->m_id); }
     
     /**
      * Read process memory.
      * @param address starting address
      * @return read data or nullopt if reading fails
      */
-    template <typename Type> std::optional<Type> readMemory(std::uintptr_t address) const noexcept {
+    template <typename Type> std::optional<Type> read_memory(std::uintptr_t address) const noexcept {
       Type buffer{};
       struct iovec local_iovec[ 1 ];
       struct iovec remote_iovec[ 1 ];
@@ -172,7 +173,7 @@ namespace trickster {
      * NOTE: process_vm_readv return value may be less than the total number
      * of requested bytes, if a partial write occurred.
      */
-    template <typename Type> std::optional<bool> writeMemory(std::uintptr_t address, Type data) const noexcept {
+    template <typename Type> std::optional<bool> write_memory(std::uintptr_t address, Type data) const noexcept {
       struct iovec local_iovec[ 1 ];
       struct iovec remote_iovec[ 1 ];
 
