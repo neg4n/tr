@@ -50,7 +50,7 @@ namespace trickster {
      * @param processName name of the process.
      * @return id of the process or std::nullopt if function fails.
      */
-    inline std::optional<int> getProcessIdByName(std::string_view processName) noexcept() {
+    inline std::optional<int> getProcessIdByName(std::string_view processName) noexcept {
       if (processName.empty())
         return std::nullopt;
 
