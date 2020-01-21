@@ -50,7 +50,7 @@ namespace trickster {
      * @param processName name of the process.
      * @return id of the process or std::nullopt if function fails.
      */
-    inline std::optional<int> getProcessIdByName(std::string_view processName) noexcept {
+    inline std::optional<int> getProcessIdByName(std::string_view processName) noexcept() {
       if (processName.empty())
         return std::nullopt;
 
@@ -79,7 +79,9 @@ namespace trickster {
      * to check if returned vector is not empty because it means that process
      * with id provided in function call does not exist.
      */
-    inline std::vector<std::string> getProcessModules(const int processId) noexcept {
+    
+    // String constructor may throw, thus the function is prone to only possibly be noexcept.
+    inline std::vector<std::string> getProcessModules(const int processId) noexcept(false) {
       std::vector<std::string> modules;
       for (const auto& process : std::filesystem::directory_iterator("/proc/")) {
         if (!process.is_directory())
