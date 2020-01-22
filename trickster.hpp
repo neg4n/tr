@@ -21,7 +21,7 @@
  * trickster - a linux memory hacking library
  * created by zxv77 (github.com/zxv77)
  *
- * version 1.0
+ * version 1.1
  */
 namespace trickster {
   /**
@@ -69,6 +69,9 @@ namespace trickster {
             return std::stoi(process.path().string().erase(0, 6));
         }
       }
+#ifdef TRICKSTER_DEBUG
+      std::cerr << "[trickster] Could not get " << process_name << " id. Consider checking if it exists." << std::endl;
+#endif
       return std::nullopt;
     }
 
@@ -79,7 +82,7 @@ namespace trickster {
      * to check if returned vector is not empty because it means that process
      * with id provided in function call does not exist.
      */
-    
+
     // String constructor may throw, thus the function is prone to only possibly be noexcept.
     inline std::vector<std::string> get_process_modules(const int pid) noexcept(false) {
       std::vector<std::string> modules;
@@ -106,6 +109,9 @@ namespace trickster {
           }
         }
       }
+#ifdef TRICKSTER_DEBUG
+      std::cerr << "[trickster] Could not get modules of process with id: " << pid << ". Consider checking if it exists." << std::endl;
+#endif
       return {};
     }
   } // namespace utils
@@ -137,7 +143,7 @@ namespace trickster {
      * with id provided in function call does not exist.
      */
     [[nodiscard]] std::vector<std::string> get_modules() const noexcept { return utils::get_process_modules(this->m_id); }
-    
+
     /**
      * Read process memory.
      * @param address starting address
@@ -155,7 +161,7 @@ namespace trickster {
 
       if (process_vm_readv(this->m_id, local_iovec, 1, remote_iovec, 1, 0) == -1) {
 #ifdef TRICKSTER_DEBUG
-        std::cerr << "[READ FAIL] Error code: " << errno << std::endl << "Message: " << strerror(errno) << std::endl;
+        std::cerr << "[trickster] Memory reading failed. Error code: " << errno << std::endl << std::setw(21) << "Message: " << strerror(errno) << std::endl;
 #endif
         return std::nullopt;
       }
@@ -182,11 +188,11 @@ namespace trickster {
       remote_iovec[ 0 ].iov_base = reinterpret_cast<void*>(address);
       remote_iovec[ 0 ].iov_len = sizeof(Type);
 
-      const auto result = process_vm_writev(this->m_id, local_iovec, 1, remote_iovec, 1, 0);
+      const std::size_t result = process_vm_writev(this->m_id, local_iovec, 1, remote_iovec, 1, 0);
 
       if (result == -1) {
 #ifdef TRICKSTER_DEBUG
-        std::cerr << "[WRITE FAIL] Error code: " << errno << std::endl << "Message: " << strerror(errno) << std::endl;
+        std::cerr << "[trickster] Memory writing failed. Error code: " << errno << std::endl << std::setw(21) << "Message: " << strerror(errno) << std::endl;
 #endif
         return std::nullopt;
       }
