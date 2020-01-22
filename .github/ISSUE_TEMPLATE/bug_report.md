@@ -1,16 +1,16 @@
 ---
 name: Bug report
-about: Create a report to help us improve
-title: "[BUG]"
+about: Create a report to help us improve trickster.
+title: "[BUG] Short but specific title about the problem"
 labels: bug
 assignees: ''
 
 ---
 
 **Specifications:**
- - operating system
- - kernel
- - library version
+ - OS: `here`
+ - Kernel: `here`
+ - Trickster version: `here`
 
 **Describe the bug**
 A clear and concise description of what the bug is.
