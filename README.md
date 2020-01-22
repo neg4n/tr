@@ -21,21 +21,26 @@ your program with `-DTRICKSTER_DEBUG` compiler flag. (g++)
 
 #### Example implementation:
 ```cpp
-#include "trickster.hpp"
 #include <memory>
+#include "trickster.hpp"
 
 int main() {
   // Create Process object.
-  auto testProcess = std::make_shared<trickster::Process>("test");
+  auto test_process = std::make_shared<trickster::Process>("test");
+
   // Print process modules.
-  for (const auto& module : testProcess->getProcessModules())
+  for (const auto& module : test_process->get_modules())
     std::cout << module << std::endl;
+
   // Read int value at 0x7ffce9fb1a34 address.
-  std::cout << "\nreadMemory Test: " << testProcess->readMemory<int>(0x7ffce9fb1a34).value() << std::endl;
+  std::cout << "\nread_memory Test: " << test_process->read_memory<int>(0x7ffce9fb1a34).value() << std::endl;
+
   // Write int with value of 300 at 0x7ffce9fb1a34 address.
-  testProcess->writeMemory<int>(0x7ffce9fb1a34, 300);
+  test_process->write_memory<int>(0x7ffce9fb1a34, 300);
+
   // Once again read value at 0x7ffce9fb1a34 address to see, if write above succeed.
-  std::cout << "\nreadMemory Test: " << testProcess->readMemory<int>(0x7ffce9fb1a34).value() << std::endl;
+  std::cout << "\nread_memory Test: " << test_process->read_memory<int>(0x7ffce9fb1a34).value() << std::endl;
+  
   return 0;
 }
 
