@@ -134,7 +134,7 @@ namespace trickster {
      * Get process name.
      * @return process name.
      */
-    [[nodiscard]] std::string get_name() const noexcept { return this->m_name; }
+    [[nodiscard]] const std::string& get_name() const noexcept { return this->m_name; }
 
     /**
      * Get process modules.
@@ -154,7 +154,7 @@ namespace trickster {
       struct iovec local_iovec[ 1 ];
       struct iovec remote_iovec[ 1 ];
 
-      local_iovec[ 0 ].iov_base = &buffer;
+      local_iovec[ 0 ].iov_base = std::addressof(buffer);
       local_iovec[ 0 ].iov_len = sizeof(Type);
       remote_iovec[ 0 ].iov_base = reinterpret_cast<void*>(address);
       remote_iovec[ 0 ].iov_len = sizeof(Type);
@@ -179,11 +179,11 @@ namespace trickster {
      * NOTE: process_vm_readv return value may be less than the total number
      * of requested bytes, if a partial write occurred.
      */
-    template <typename Type> std::optional<bool> write_memory(std::uintptr_t address, Type data) const noexcept {
+    template <typename Type> std::optional<bool> write_memory(std::uintptr_t address, const Type& data) const noexcept {
       struct iovec local_iovec[ 1 ];
       struct iovec remote_iovec[ 1 ];
 
-      local_iovec[ 0 ].iov_base = &data;
+      local_iovec[ 0 ].iov_base = const_cast<Type*>(std::addressof(data));
       local_iovec[ 0 ].iov_len = sizeof(Type);
       remote_iovec[ 0 ].iov_base = reinterpret_cast<void*>(address);
       remote_iovec[ 0 ].iov_len = sizeof(Type);
