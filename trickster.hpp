@@ -220,7 +220,26 @@ namespace trickster {
    * trickster's utilities namespace.
    */
   namespace utils {
-    // TODO: Something
+    /**
+     * Utility function for getting list of shared objects
+     * loaded into process memory without duplicate entries.
+     * @param regions mapped memory regions where modules are located.
+     * @return prettified list of loaded modules.
+     */
+    [[nodiscard]] std::vector<std::string> get_modules(const std::vector<MemoryRegion>& regions) noexcept {
+      std::vector<std::string> modules;
+
+      for (const auto& region : regions)
+        if (region.filename.find(".so") != std::string::npos)
+          modules.push_back(region.filename);
+        else
+          continue;
+
+      std::sort(modules.begin(), modules.end());
+      modules.erase(std::unique(modules.begin(), modules.end()), modules.end());
+
+      return modules;
+    }
   } // namespace utils
 
   class Process {
