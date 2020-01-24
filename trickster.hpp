@@ -24,19 +24,6 @@
  * version 1.1
  */
 namespace trickster {
-  /**
-   * internal trickster's namespace.
-   * DO NOT use outside trickster.hpp
-   * if you dont have to.
-   */
-  namespace internal {
-    /**
-     * Check if string contains only digits.
-     * @param string string to check
-     * @return true if only digits, false otherwise
-     */
-    inline bool only_digits(std::string_view string) noexcept { return std::all_of(string.begin(), string.end(), ::isdigit); }
-  } // namespace internal
 
   /**
    * Each row in /proc/$PID/maps describes a region of
@@ -101,12 +88,18 @@ namespace trickster {
   };
 
   /**
-   * trickster's utilities namespace. contains
-   * several utils in purpose to for example:
-   * get process id without creating
-   * `Process` object.
+   * internal trickster's namespace.
+   * DO NOT use outside trickster.hpp
+   * if you dont have to.
    */
-  namespace utils {
+  namespace internal {
+    /**
+     * Check if string contains only digits.
+     * @param string string to check
+     * @return true if only digits, false otherwise
+     */
+    inline bool only_digits(std::string_view string) noexcept { return std::all_of(string.begin(), string.end(), ::isdigit); }
+
     /**
      * Get process id by name.
      * @param process_name name of the process.
@@ -221,6 +214,13 @@ namespace trickster {
 #endif
       return {};
     }
+  } // namespace internal
+
+  /**
+   * trickster's utilities namespace.
+   */
+  namespace utils {
+    // TODO: Something
   } // namespace utils
 
   class Process {
@@ -230,7 +230,7 @@ namespace trickster {
     std::vector<MemoryRegion> m_regions;
 
   public:
-    Process(std::string_view process_name) : m_id(utils::get_pid_by_name(process_name).value_or(-1)), m_name(process_name){};
+    Process(std::string_view process_name) : m_id(internal::get_pid_by_name(process_name).value_or(-1)), m_name(process_name){};
 
     /**
      * Get process id.
@@ -250,12 +250,12 @@ namespace trickster {
      * to check if returned vector is not empty because it means that process
      * with id provided in function call does not exist.
      */
-    [[nodiscard]] std::vector<MemoryRegion> get_memory_regions() const noexcept { return utils::map_memory_regions(this->m_id); }
+    [[nodiscard]] std::vector<MemoryRegion> get_memory_regions() const noexcept { return internal::map_memory_regions(this->m_id); }
 
     /**
      * Map memory regions.
      */
-    void map_memory_regions() noexcept(false) { this->m_regions = utils::map_memory_regions(this->m_id); }
+    void map_memory_regions() noexcept(false) { this->m_regions = internal::map_memory_regions(this->m_id); }
 
     /**
      * Read process memory.
