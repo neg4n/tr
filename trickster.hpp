@@ -39,6 +39,68 @@ namespace trickster {
   } // namespace internal
 
   /**
+   * Each row in /proc/$PID/maps describes a region of
+   * contiguous virtual memory in a process or thread.
+   *
+   * Each row has the following fields:
+   *
+   * address           perms offset  dev   inode   pathname
+   * 08048000-08056000 r-xp 00000000 03:0c 64593   /usr/sbin/gpm
+   */
+  struct MemoryRegion {
+    /**
+     * This is the starting and ending address of the region in the process's address space.
+     */
+    uint64_t start, end;
+
+    /**
+     * This describes how pages in the region can be accessed.
+     * There are four different permissions: read, write, execute, and shared.
+     * If read/write/execute are disabled, a - will appear instead of the r/w/x.
+     * If a region is not shared, it is private, so a p will appear instead of an s.
+     * If the process attempts to access memory in a way that is not permitted, a segmentation fault is generated.
+     *
+     * Permissions can be changed using the mprotect system call.
+     */
+    bool readable, writable, executable, shared;
+
+    /**
+     * If the region was mapped from a file (using mmap), this is the offset in the file where the mapping begins.
+     * If the memory was not mapped from a file, it's just 0.
+     */
+    uint64_t offset;
+
+    /**
+     * If the region was mapped from a file, this is the major and minor device number (in hex) where the file lives.
+     */
+    uint64_t device_major, device_minor;
+
+    /**
+     * If the region was mapped from a file, this is the file number.
+     */
+    uint64_t inode;
+
+    /**
+     * If the region was mapped from a file, this is the name of the file.
+     * This field is blank for anonymous mapped regions.
+     * There are also special regions with names like [heap], [stack], or [vdso].
+     * [vdso] stands for virtual dynamic shared object.
+     * It's used by system calls to switch to kernel mode.
+     */
+    std::filesystem::path path;
+
+    /**
+     * This determines if region is special virtual dynamic shared object.
+     */
+    bool special;
+
+    /**
+     * This is shortened path to contain just the filename of module.
+     */
+    std::string filename;
+  };
+
+  /**
    * trickster's utilities namespace. contains
    * several utils in purpose to for example:
    * get process id without creating
@@ -76,16 +138,16 @@ namespace trickster {
     }
 
     /**
-     * Get process modules.
+     * Get process memory regions.
      * @param pid process id.
-     * @return std::vector containing modules as its entries, it is good
+     * @return std::vector containing memory regions as its entries, it is good
      * to check if returned vector is not empty because it means that process
      * with id provided in function call does not exist.
      */
 
     // String constructor may throw, thus the function is prone to only possibly be noexcept.
-    inline std::vector<std::string> get_process_modules(const int pid) noexcept(false) {
-      std::vector<std::string> modules;
+    inline std::vector<MemoryRegion> map_memory_regions(const int pid) noexcept(false) {
+      std::vector<MemoryRegion> regions;
       for (const auto& process : std::filesystem::directory_iterator("/proc/")) {
         if (!process.is_directory())
           continue;
@@ -98,14 +160,59 @@ namespace trickster {
           std::ifstream process_memory_map_fs(process.path() / "maps");
 
           if (process_memory_map_fs.is_open()) {
-            while (std::getline(process_memory_map_fs, line))
-              if (line.find(".so") != std::string::npos)
-                modules.push_back(line.erase(0, 73));
+            // TODO: Find faster and better way to do it.
+            while (std::getline(process_memory_map_fs, line)) {
+              MemoryRegion region;
+              std::size_t cursor_position, previous_cursor_position = 0;
 
-            std::sort(modules.begin(), modules.end());
-            modules.erase(std::unique(modules.begin(), modules.end()), modules.end());
+              cursor_position = line.find_first_of('-');
 
-            return modules;
+              region.start = std::stoul(line.substr(0, cursor_position), nullptr, 16);
+
+              previous_cursor_position = cursor_position;
+
+              cursor_position = line.find_first_of(' ');
+
+              region.end = std::stoul(line.substr(previous_cursor_position + 1, cursor_position), nullptr, 16);
+
+              region.readable = line.substr(cursor_position + 1, 1) == "r";
+              region.writable = line.substr(cursor_position + 2, 1) == "w";
+              region.executable = line.substr(cursor_position + 3, 1) == "x";
+              region.shared = line.substr(cursor_position + 4, 1) != "p";
+
+              cursor_position += 6;
+              previous_cursor_position = cursor_position;
+
+              region.offset = std::stoul(line.substr(previous_cursor_position, 8), nullptr, 16);
+
+              cursor_position = line.find_first_of(' ', previous_cursor_position);
+
+              cursor_position++;
+
+              region.device_major = std::stol(line.substr(cursor_position, 2), nullptr, 16);
+
+              cursor_position += 3; // 4 Because we want to skip the `:` device separator
+
+              region.device_minor = std::stol(line.substr(cursor_position, 2), nullptr, 16);
+
+              cursor_position += 1;
+              previous_cursor_position = cursor_position;
+
+              region.inode = std::stol(line.substr(cursor_position + 2, 9), nullptr, 16);
+
+              if (line.find(".so") != std::string::npos || line.find("[") != std::string::npos) {
+                if (line.find("[") != std::string::npos)
+                  region.special = true;
+                else
+                  region.special = false;
+
+                region.path = std::filesystem::path{line.erase(0, 73)};
+                region.filename = region.path.string().erase(0, region.path.string().find_last_of("/") + 1);
+              }
+
+              regions.push_back(region);
+            }
+            return regions;
           }
         }
       }
@@ -120,9 +227,10 @@ namespace trickster {
   private:
     const int m_id;
     const std::string m_name;
+    std::vector<MemoryRegion> m_regions;
 
   public:
-    Process(std::string_view process_name) : m_id(utils::get_pid_by_name(process_name).value()), m_name(process_name){};
+    Process(std::string_view process_name) : m_id(utils::get_pid_by_name(process_name).value_or(-1)), m_name(process_name){};
 
     /**
      * Get process id.
@@ -142,7 +250,12 @@ namespace trickster {
      * to check if returned vector is not empty because it means that process
      * with id provided in function call does not exist.
      */
-    [[nodiscard]] std::vector<std::string> get_modules() const noexcept { return utils::get_process_modules(this->m_id); }
+    [[nodiscard]] std::vector<MemoryRegion> get_memory_regions() const noexcept { return utils::map_memory_regions(this->m_id); }
+
+    /**
+     * Map memory regions.
+     */
+    void map_memory_regions() noexcept(false) { this->m_regions = utils::map_memory_regions(this->m_id); }
 
     /**
      * Read process memory.
