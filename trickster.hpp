@@ -263,9 +263,9 @@ namespace trickster {
      */
     [[nodiscard]] const std::string& get_name() const noexcept { return this->m_name; }
 
-    /**
-     * Get process modules.
-     * @return std::vector containing modules as its entries, it is good
+     /**
+     * Get process memory regions.
+     * @return std::vector containing memory regions as its entries, it is good
      * to check if returned vector is not empty because it means that process
      * with id provided in function call does not exist.
      */
