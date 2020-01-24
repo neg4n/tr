@@ -13,8 +13,9 @@ your program with `-DTRICKSTER_DEBUG` compiler flag. (g++)
 #### Features
 
 `trickster` provides ability to:
-- Enumerate process modules.
 - Get process id by name.
+- Map process memory regions.
+- Enumerate process modules.
 - Manipulate process memory.
     - Write memory.
     - Read memory.
@@ -22,24 +23,28 @@ your program with `-DTRICKSTER_DEBUG` compiler flag. (g++)
 #### Example implementation:
 ```cpp
 #include <memory>
+
 #include "trickster.hpp"
 
 int main() {
   // Create Process object.
-  auto test_process = std::make_shared<trickster::Process>("test");
+  auto hack_context = std::make_shared<trickster::Process>("test");
 
-  // Print process modules.
-  for (const auto& module : test_process->get_modules())
+  // Map memory regions.
+  hack_context->map_memory_regions();
+
+  // Print modules loaded into process memory.
+  for (const auto& module : trickster::utils::get_modules(hack_context->get_memory_regions()))
     std::cout << module << std::endl;
 
   // Read int value at 0x7ffce9fb1a34 address.
-  std::cout << "\nread_memory Test: " << test_process->read_memory<int>(0x7ffce9fb1a34).value() << std::endl;
+  std::cout << "\nread_memory Test: " << hack_context->read_memory<int>(0x7ffce9fb1a34).value_or(-1) << std::endl;
 
   // Write int with value of 300 at 0x7ffce9fb1a34 address.
-  test_process->write_memory<int>(0x7ffce9fb1a34, 300);
+  hack_context->write_memory<int>(0x7ffce9fb1a34, 300);
 
   // Once again read value at 0x7ffce9fb1a34 address to see, if write above succeed.
-  std::cout << "\nread_memory Test: " << test_process->read_memory<int>(0x7ffce9fb1a34).value() << std::endl;
+  std::cout << "\nread_memory Test: " << hack_context->read_memory<int>(0x7ffce9fb1a34).value_or(-1) << std::endl;
   
   return 0;
 }
