@@ -210,7 +210,7 @@ namespace trickster {
         }
       }
 #ifdef TRICKSTER_DEBUG
-      std::cerr << "[trickster] Could not get modules of process with id: " << pid << ". Consider checking if it exists." << std::endl;
+      std::cerr << "[trickster] Could not get memory regions of process with id: " << pid << ". Consider checking if it exists." << std::endl;
 #endif
       return {};
     }
