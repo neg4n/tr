@@ -203,7 +203,7 @@ namespace trickster {
                 region.filename = region.path.string().erase(0, region.path.string().find_last_of("/") + 1);
               }
 
-              regions.push_back(region);
+              regions.push_back(std::move(region));
             }
             return regions;
           }
@@ -229,14 +229,18 @@ namespace trickster {
     [[nodiscard]] std::vector<std::string> get_modules(const std::vector<MemoryRegion>& regions) noexcept {
       std::vector<std::string> modules;
 
-      for (const auto& region : regions)
+      modules.reserve(regions.size());
+      
+      for (auto& region : regions)
         if (region.filename.find(".so") != std::string::npos)
-          modules.push_back(region.filename);
+          modules.push_back(std::move(region.filename));
         else
           continue;
 
       std::sort(modules.begin(), modules.end());
       modules.erase(std::unique(modules.begin(), modules.end()), modules.end());
+
+      modules.shrink_to_fit();
 
       return modules;
     }
