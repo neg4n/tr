@@ -230,7 +230,7 @@ namespace trickster {
       std::vector<std::string> modules;
 
       modules.reserve(regions.size());
-      
+
       for (auto& region : regions)
         if (region.filename.find(".so") != std::string::npos)
           modules.push_back(std::move(region.filename));
@@ -256,6 +256,12 @@ namespace trickster {
     Process(std::string_view process_name) : m_id(internal::get_pid_by_name(process_name).value_or(-1)), m_name(process_name){};
 
     /**
+     * Check if process is valid.
+     * @return state of statement above.
+     */
+    [[nodiscard]] bool is_valid() const noexcept { return this->m_id != -1; }
+
+    /**
      * Get process id.
      * @return process id
      */
@@ -267,7 +273,7 @@ namespace trickster {
      */
     [[nodiscard]] const std::string& get_name() const noexcept { return this->m_name; }
 
-     /**
+    /**
      * Get process memory regions.
      * @return std::vector containing memory regions as its entries, it is good
      * to check if returned vector is not empty because it means that process
