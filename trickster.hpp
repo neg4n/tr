@@ -279,7 +279,7 @@ namespace trickster {
      * to check if returned vector is not empty because it means that process
      * with id provided in function call does not exist.
      */
-    [[nodiscard]] std::vector<MemoryRegion> get_memory_regions() const noexcept { return internal::map_memory_regions(this->m_id); }
+    [[nodiscard]] std::vector<MemoryRegion> get_memory_regions() const noexcept { return this->m_regions; }
 
     /**
      * Map memory regions.
