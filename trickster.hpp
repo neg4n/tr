@@ -21,7 +21,7 @@
  * trickster - a linux memory hacking library
  * created by zxv77 (github.com/zxv77)
  *
- * version 1.2
+ * version 1.3
  */
 namespace trickster {
 
