@@ -19,7 +19,7 @@
 
 /**
  * trickster - a linux memory hacking library
- * created by zxv77 (github.com/zxv77)
+ * created by neg4n (github.com/neg4n)
  *
  * version 1.3
  */
