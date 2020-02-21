@@ -19,7 +19,7 @@
 
 /**
  * trickster - a linux memory hacking library
- * created by zxv77 (github.com/zxv77)
+ * created by neg4n (github.com/neg4n)
  *
  * version 1.3
  */
@@ -98,14 +98,14 @@ namespace trickster {
      * @param string string to check
      * @return true if only digits, false otherwise
      */
-    inline bool only_digits(std::string_view string) noexcept { return std::all_of(string.begin(), string.end(), ::isdigit); }
+    inline bool only_digits(std::string_view string) { return std::all_of(string.begin(), string.end(), ::isdigit); }
 
     /**
      * Get process id by name.
      * @param process_name name of the process.
      * @return id of the process or std::nullopt if function fails.
      */
-    inline std::optional<int> get_pid_by_name(std::string_view process_name) noexcept {
+    inline std::optional<int> get_pid_by_name(std::string_view process_name) {
       if (process_name.empty())
         return std::nullopt;
 
@@ -138,8 +138,7 @@ namespace trickster {
      * with id provided in function call does not exist.
      */
 
-    // String constructor may throw, thus the function is prone to only possibly be noexcept.
-    inline std::vector<MemoryRegion> map_memory_regions(const int pid) noexcept(false) {
+    inline std::vector<MemoryRegion> map_memory_regions(const int pid) {
       std::vector<MemoryRegion> regions;
       for (const auto& process : std::filesystem::directory_iterator("/proc/")) {
         if (!process.is_directory())
@@ -226,7 +225,7 @@ namespace trickster {
      * @param regions mapped memory regions where modules are located.
      * @return prettified list of loaded modules.
      */
-    [[nodiscard]] std::vector<std::string> get_modules(const std::vector<MemoryRegion>& regions) noexcept {
+    [[nodiscard]] std::vector<std::string> get_modules(const std::vector<MemoryRegion>& regions) {
       std::vector<std::string> modules;
 
       modules.reserve(regions.size());
@@ -259,19 +258,19 @@ namespace trickster {
      * Check if process is valid.
      * @return state of statement above.
      */
-    [[nodiscard]] bool is_valid() const noexcept { return this->m_id != -1; }
+    [[nodiscard]] bool is_valid() const { return this->m_id != -1; }
 
     /**
      * Get process id.
      * @return process id
      */
-    [[nodiscard]] int get_id() const noexcept { return this->m_id; }
+    [[nodiscard]] int get_id() const { return this->m_id; }
 
     /**
      * Get process name.
      * @return process name.
      */
-    [[nodiscard]] const std::string& get_name() const noexcept { return this->m_name; }
+    [[nodiscard]] const std::string& get_name() const { return this->m_name; }
 
     /**
      * Get process memory regions.
@@ -279,19 +278,19 @@ namespace trickster {
      * to check if returned vector is not empty because it means that process
      * with id provided in function call does not exist.
      */
-    [[nodiscard]] std::vector<MemoryRegion> get_memory_regions() const noexcept { return this->m_regions; }
+    [[nodiscard]] std::vector<MemoryRegion> get_memory_regions() const { return this->m_regions; }
 
     /**
      * Map memory regions.
      */
-    void map_memory_regions() noexcept(false) { this->m_regions = internal::map_memory_regions(this->m_id); }
+    void map_memory_regions() { this->m_regions = internal::map_memory_regions(this->m_id); }
 
     /**
      * Read process memory.
      * @param address starting address
      * @return read data or nullopt if reading fails
      */
-    template <typename Type> std::optional<Type> read_memory(std::uintptr_t address) const noexcept {
+    template <typename Type> std::optional<Type> read_memory(std::uintptr_t address) const {
       Type buffer{};
       struct iovec local_iovec[ 1 ];
       struct iovec remote_iovec[ 1 ];
@@ -321,7 +320,7 @@ namespace trickster {
      * NOTE: process_vm_readv return value may be less than the total number
      * of requested bytes, if a partial write occurred.
      */
-    template <typename Type> std::optional<bool> write_memory(std::uintptr_t address, const Type& data) const noexcept {
+    template <typename Type> std::optional<bool> write_memory(std::uintptr_t address, const Type& data) const {
       struct iovec local_iovec[ 1 ];
       struct iovec remote_iovec[ 1 ];
 
