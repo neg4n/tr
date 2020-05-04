@@ -1,5 +1,9 @@
-.vscode
-main.cpp
-test.cpp
+.vscode/
+.clangd/
+.github/
+src/
 build
+
+compile_commands.json
+CMakeLists.txt
 

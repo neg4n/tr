@@ -1,16 +1,32 @@
+
+# --------------------------------------------
+#     neg4n's clang-format configuration.
+#             github.com/neg4n
+# --------------------------------------------
 ---
 BasedOnStyle: LLVM
 Language: Cpp
-NamespaceIndentation: All
-PointerAlignment: Left
-SortIncludes: 'true'
-ColumnLimit: '180'
-SpaceAfterTemplateKeyword: 'true'
-SpaceInEmptyParentheses: 'false'
-SpacesBeforeTrailingComments: '1'
-SpacesInAngles: 'false'
-SpacesInParentheses: 'false'
-SpacesInSquareBrackets: 'true'
-TabWidth: '3'
+TabWidth: 2
+ColumnLimit: 110
 UseTab: Never
-
+AllowAllParametersOfDeclarationOnNextLine: false
+BinPackArguments: false
+BinPackParameters: false
+Cpp11BracedListStyle: false
+ExperimentalAutoDetectBinPacking: false
+IndentCaseLabels: true
+NamespaceIndentation: All
+PointerAlignment: Middle
+SortUsingDeclarations: false
+SpaceAfterTemplateKeyword: true
+SpaceBeforeCpp11BracedList: true
+SpaceInEmptyParentheses: true
+SpacesBeforeTrailingComments: 1
+SpacesInAngles: false
+SpacesInParentheses: true
+SpacesInSquareBrackets: true
+AllowShortCaseLabelsOnASingleLine: true
+AlignConsecutiveAssignments: true
+AlignConsecutiveDeclarations: true
+AlwaysBreakTemplateDeclarations: "MultiLine"
+AlignEscapedNewlines: "Left"

@@ -27,8 +27,8 @@ your program with `-DTRICKSTER_DEBUG` compiler flag. (g++)
 #include "trickster.hpp"
 
 int main() {
-  // Create Process object.
-  auto hack_context = std::make_shared<trickster::Process>("test");
+  // Create process_t object.
+  auto hack_context = std::make_shared<trickster::process_t>("test");
 
   // Map memory regions.
   hack_context->map_memory_regions();
