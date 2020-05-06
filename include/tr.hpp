@@ -110,7 +110,6 @@ namespace tr {
    * if you dont have to.
    */
   namespace _internal {
-
     enum class log_levels_t : std::uint8_t { info = 0, error };
     template <log_levels_t L, typename... Args> void log( std::string_view format, Args... args ) {
       std::string output { tr_string( "[tr] " ) };
@@ -121,6 +120,23 @@ namespace tr {
         fprintf( stdout, output.append( tr_string( "\n" ) ).c_str( ), args... );
       }
     }
+
+    /**
+     * Memory read result.
+     */
+    template <typename T> struct read_result_t {
+      T           data;
+      std::size_t bytes_requested, bytes_read;
+      bool        partial_read = bytes_requested != bytes_read;
+    };
+
+    /**
+     * Memory write result.
+     */
+    template <typename T> struct write_result_t {
+      std::size_t bytes_requested, bytes_written;
+      bool        partial_write = bytes_requested != bytes_written;
+    };
 
     /**
      * Check if string contains only digits.
@@ -328,7 +344,7 @@ namespace tr {
     /**
      * Map memory regions.
      */
-    void map_memory_regions( ) noexcept {
+    void map_memory_regions( ) {
       tr_assert( is_valid( ), tr_string( "Process is invalid." ) );
       m_regions = _internal::map_memory_regions( m_id );
     }
@@ -337,7 +353,7 @@ namespace tr {
      * Read process memory.
      * @param address starting address
      * @param size read size (default: sizeof(T))
-     * @return read data or nullopt if reading fails
+     * @return read_result_t struct. See tr.hpp (line 127)
      *
      * NOTE: process_vm_readv return value may be less than the total number
      * of requested bytes, if a partial write occurred. Define TRICKSTER_DEBUG
@@ -345,8 +361,12 @@ namespace tr {
      *
      * TODO: return bool (bytes requested == bytes written)
      */
+
+    // clang-format off
     template <typename T>
-    std::optional<T> read_memory( std::uintptr_t address, std::size_t size = sizeof( T ) ) const {
+    std::optional<_internal::read_result_t<T>> 
+    read_memory( std::uintptr_t address, std::size_t size = sizeof( T ) ) const {
+      // clang-format on
       tr_assert( is_valid( ), tr_string( "Process is invalid." ) );
 
       T     buffer {};
@@ -358,12 +378,7 @@ namespace tr {
       remote[ 0 ].iov_len  = size;
 
       const std::size_t result = process_vm_readv( m_id, local, 1, remote, 1, 0 );
-#ifdef TRICKSTER_DEBUG
-      if ( result != size ) {
-        _internal::log<_internal::log_levels_t::info>(
-            tr_string( "Partial read occured." ), errno, strerror( errno ) );
-      }
-#endif
+
       if ( result == -1 ) {
 #ifdef TRICKSTER_DEBUG
         _internal::log<_internal::log_levels_t::error>(
@@ -371,8 +386,13 @@ namespace tr {
 #endif
         return std::nullopt;
       }
-
-      return buffer;
+#ifdef TRICKSTER_DEBUG
+      if ( result != size ) {
+        _internal::log<_internal::log_levels_t::info>(
+            tr_string( "Partial read occured." ), errno, strerror( errno ) );
+      }
+#endif
+      return _internal::read_result_t<T> { buffer, size, result };
     }
 
     /**
@@ -380,15 +400,14 @@ namespace tr {
      * @param address starting address
      * @param data data to be written
      * @param size read size (default: sizeof(T))
-     * @return boolean determining if bytes written are equal to size of requested bytes.
-     * or std::nullopt if writing fails.
+     * @return write_result_t struct. See tr.hpp (line 137)
      *
      * NOTE: process_vm_writev return value may be less than the total number
      * of requested bytes, if a partial write occurred. Define TRICKSTER_DEBUG
      * to see if this situation (the one described above) happens.
      */
     template <typename T>
-    std::optional<bool>
+    std::optional<_internal::write_result_t<T>>
     write_memory( std::uintptr_t address, const T & data, std::size_t size = sizeof( T ) ) const {
       tr_assert( is_valid( ), tr_string( "Process is invalid." ) );
 
@@ -400,12 +419,7 @@ namespace tr {
       remote[ 0 ].iov_len  = size;
 
       const std::size_t result = process_vm_writev( m_id, local, 1, remote, 1, 0 );
-#ifdef TRICKSTER_DEBUG
-      if ( result != size ) {
-        _internal::log<_internal::log_levels_t::info>(
-            tr_string( "Partial write occured." ), errno, strerror( errno ) );
-      }
-#endif
+
       if ( result == -1 ) {
 #ifdef TRICKSTER_DEBUG
         _internal::log<_internal::log_levels_t::error>(
@@ -413,16 +427,21 @@ namespace tr {
 #endif
         return std::nullopt;
       }
-
-      return result == size;
+#ifdef TRICKSTER_DEBUG
+      if ( result != size ) {
+        _internal::log<_internal::log_levels_t::info>(
+            tr_string( "Partial write occured." ), errno, strerror( errno ) );
+      }
+#endif
+      return _internal::write_result_t<T> { size, result };
     }
 
-    [[nodiscard]] std::optional<std::uintptr_t> get_call_address( std::uintptr_t address ) const noexcept {
+    [[nodiscard]] std::optional<std::uintptr_t> get_call_address( std::uintptr_t address ) const {
       tr_assert( is_valid( ), tr_string( "Process is invalid." ) );
 
-      auto memory_opt = read_memory<std::uintptr_t>( address + 0x1, sizeof( std::uint32_t ) );
-      if ( memory_opt.has_value( ) ) {
-        return ( memory_opt.value( ) + ( address + 0x5 ) );
+      const auto memory_opt = read_memory<std::uintptr_t>( address + 0x1, sizeof( std::uint32_t ) );
+      if ( memory_opt.has_value( ) && !memory_opt.value( ).partial_read ) {
+        return ( memory_opt.value( ).data + ( address + 0x5 ) );
       } else {
 #ifdef TRICKSTER_DEBUG
         _internal::log<_internal::log_levels_t::error>(
