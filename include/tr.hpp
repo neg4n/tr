@@ -21,7 +21,7 @@
 
 #define tr_assert( condition, message ) assert( condition && message )
 /**
- * This macro provides ability to encrypt all trickster's
+ * This macro provides ability to encrypt all tr's
  * strings during compilation using heavily vectorized
  * c++17 compile time string encryption library
  * (https://github.com/JustasMasiulis/xorstr)
@@ -33,12 +33,12 @@
 #endif
 
 /**
- * trickster - a linux memory hacking library
+ * tr - a linux memory hacking library
  * created by neg4n (github.com/neg4n)
  *
  * version 1.3
  */
-namespace trickster {
+namespace tr {
 
   /**
    * Each row in /proc/$PID/maps describes a region of
@@ -105,15 +105,15 @@ namespace trickster {
   };
 
   /**
-   * internal trickster's namespace.
-   * DO NOT use outside trickster.hpp
+   * internal tr's namespace.
+   * DO NOT use outside tr.hpp
    * if you dont have to.
    */
   namespace _internal {
 
     enum class log_levels_t : std::uint8_t { info = 0, error };
     template <log_levels_t L, typename... Args> void log( std::string_view format, Args... args ) {
-      std::string output { tr_string( "[trickster] " ) };
+      std::string output { tr_string( "[tr] " ) };
       output.append( format );
       if constexpr ( L == log_levels_t::error ) {
         fprintf( stderr, output.append( tr_string( "\n" ) ).c_str( ), args... );
@@ -250,7 +250,7 @@ namespace trickster {
   } // namespace _internal
 
   /**
-   * trickster's utilities namespace.
+   * tr's utilities namespace.
    */
   namespace utils {
 
@@ -395,7 +395,7 @@ namespace trickster {
 
     [[nodiscard]] std::optional<std::uintptr_t> get_call_address( std::uintptr_t address ) const noexcept {
       tr_assert( is_valid( ), tr_string( "Process is invalid." ) );
-      
+
       auto memory_opt = read_memory<std::uintptr_t>( address + 0x1 );
       if ( memory_opt.has_value( ) ) {
         return memory_opt.value( ) + ( address + 0x5 );
@@ -411,11 +411,11 @@ namespace trickster {
     }
   };
 
-} // namespace trickster
+} // namespace tr
 
 #ifndef TRICKSTER_NO_GLOBALS
 
-using process_t = trickster::process_t;
+using process_t = tr::process_t;
 #define get_modules_list trickster::utils::get_modules
 
 #endif
