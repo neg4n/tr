@@ -1,8 +1,8 @@
-# trickster
+# tr (trickster)
 linux memory hacking library
 
-To start using trickster, clone this repository  
-and embed `trickster.hpp` in source code of  
+To start using tr, clone this repository  
+and embed `tr.hpp` in source code of  
 your application or use this repository as  
 [git submodule](https://git-scm.com/book/en/v2/Git-Tools-Submodules)
 
@@ -12,7 +12,7 @@ your program with `-DTRICKSTER_DEBUG` compiler flag. (g++)
 
 #### Features
 
-`trickster` provides ability to:
+`tr` provides ability to:
 - Get process id by name.
 - Map process memory regions.
 - Enumerate process modules.

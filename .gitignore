@@ -1,9 +1,6 @@
 .vscode/
 .clangd/
 .github/
-src/
-build
-
+build/
 compile_commands.json
-CMakeLists.txt
 

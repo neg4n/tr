@@ -127,16 +127,16 @@ namespace tr {
      * @param string string to check
      * @return true if only digits, false otherwise
      */
-    inline bool only_digits( std::string_view string ) {
+    [[nodiscard]] inline bool only_digits( std::string_view string ) {
       return std::all_of( string.begin( ), string.end( ), ::isdigit );
     }
 
     /**
      * Get process id by name.
      * @param process_name name of the process.
-     * @return id of the process or -1 if function fails.
+     * @return id of the process or std::nullopt if function fails.
      */
-    inline std::optional<int> get_pid_by_name( std::string_view process_name ) {
+    [[nodiscard]] inline std::optional<int> get_pid_by_name( std::string_view process_name ) {
       tr_assert( !process_name.empty( ), "Process name is 0 length." );
 
       for ( const auto & process : std::filesystem::directory_iterator( tr_string( "/proc/" ) ) ) {
@@ -170,7 +170,7 @@ namespace tr {
      * to check if returned vector is not empty because it means that process
      * with id provided in function call does not exist.
      */
-    inline std::vector<memory_region_t> map_memory_regions( const int pid ) {
+    [[nodiscard]] inline std::vector<memory_region_t> map_memory_regions( const int pid ) {
       std::vector<memory_region_t> regions;
       for ( const auto & process : std::filesystem::directory_iterator( tr_string( "/proc/" ) ) ) {
         if ( !process.is_directory( ) )
@@ -297,13 +297,13 @@ namespace tr {
      * Check if process is valid.
      * @return state of statement above.
      */
-    [[nodiscard]] bool is_valid( ) const { return this->m_id != invalid; }
+    [[nodiscard]] bool is_valid( ) const { return m_id != invalid; }
 
     /**
      * Get process id.
      * @return process id
      */
-    [[nodiscard]] int get_id( ) const { return this->m_id; }
+    [[nodiscard]] int get_id( ) const { return m_id; }
 
     /**
      * Get process name.
@@ -311,7 +311,7 @@ namespace tr {
      */
     [[nodiscard]] std::string_view get_name( ) const noexcept {
       tr_assert( is_valid( ), tr_string( "Process is invalid." ) );
-      return this->m_name;
+      return m_name;
     }
 
     /**
@@ -322,7 +322,7 @@ namespace tr {
      */
     [[nodiscard]] const std::vector<memory_region_t> & get_memory_regions( ) const noexcept {
       tr_assert( is_valid( ), tr_string( "Process is invalid." ) );
-      return this->m_regions;
+      return m_regions;
     }
 
     /**
@@ -330,26 +330,41 @@ namespace tr {
      */
     void map_memory_regions( ) noexcept {
       tr_assert( is_valid( ), tr_string( "Process is invalid." ) );
-      this->m_regions = _internal::map_memory_regions( this->m_id );
+      m_regions = _internal::map_memory_regions( m_id );
     }
 
     /**
      * Read process memory.
      * @param address starting address
+     * @param size read size (default: sizeof(T))
      * @return read data or nullopt if reading fails
+     *
+     * NOTE: process_vm_readv return value may be less than the total number
+     * of requested bytes, if a partial write occurred. Define TRICKSTER_DEBUG
+     * to see if this situation (the one described above) happens.
+     *
+     * TODO: return bool (bytes requested == bytes written)
      */
-    template <typename T> std::optional<T> read_memory( std::uintptr_t address ) const {
+    template <typename T>
+    std::optional<T> read_memory( std::uintptr_t address, std::size_t size = sizeof( T ) ) const {
       tr_assert( is_valid( ), tr_string( "Process is invalid." ) );
 
       T     buffer {};
       iovec local[ 1 ], remote[ 1 ];
 
       local[ 0 ].iov_base  = std::addressof( buffer );
-      local[ 0 ].iov_len   = sizeof( T );
+      local[ 0 ].iov_len   = size;
       remote[ 0 ].iov_base = (void *)( address );
-      remote[ 0 ].iov_len  = sizeof( T );
+      remote[ 0 ].iov_len  = size;
 
-      if ( process_vm_readv( this->m_id, local, 1, remote, 1, 0 ) == -1 ) {
+      const std::size_t result = process_vm_readv( m_id, local, 1, remote, 1, 0 );
+#ifdef TRICKSTER_DEBUG
+      if ( result != size ) {
+        _internal::log<_internal::log_levels_t::info>(
+            tr_string( "Partial read occured." ), errno, strerror( errno ) );
+      }
+#endif
+      if ( result == -1 ) {
 #ifdef TRICKSTER_DEBUG
         _internal::log<_internal::log_levels_t::error>(
             tr_string( "Memory reading failed with error code: %i, Message: %s" ), errno, strerror( errno ) );
@@ -364,24 +379,33 @@ namespace tr {
      * Write process memory.
      * @param address starting address
      * @param data data to be written
+     * @param size read size (default: sizeof(T))
      * @return boolean determining if bytes written are equal to size of requested bytes.
      * or std::nullopt if writing fails.
      *
-     * NOTE: process_vm_readv return value may be less than the total number
-     * of requested bytes, if a partial write occurred.
+     * NOTE: process_vm_writev return value may be less than the total number
+     * of requested bytes, if a partial write occurred. Define TRICKSTER_DEBUG
+     * to see if this situation (the one described above) happens.
      */
-    template <typename T> std::optional<bool> write_memory( std::uintptr_t address, const T & data ) const {
+    template <typename T>
+    std::optional<bool>
+    write_memory( std::uintptr_t address, const T & data, std::size_t size = sizeof( T ) ) const {
       tr_assert( is_valid( ), tr_string( "Process is invalid." ) );
 
       iovec local[ 1 ], remote[ 1 ];
 
       local[ 0 ].iov_base  = const_cast<T *>( std::addressof( data ) );
-      local[ 0 ].iov_len   = sizeof( T );
+      local[ 0 ].iov_len   = size;
       remote[ 0 ].iov_base = (void *)( address );
-      remote[ 0 ].iov_len  = sizeof( T );
+      remote[ 0 ].iov_len  = size;
 
-      const std::size_t result = process_vm_writev( this->m_id, local, 1, remote, 1, 0 );
-
+      const std::size_t result = process_vm_writev( m_id, local, 1, remote, 1, 0 );
+#ifdef TRICKSTER_DEBUG
+      if ( result != size ) {
+        _internal::log<_internal::log_levels_t::info>(
+            tr_string( "Partial write occured." ), errno, strerror( errno ) );
+      }
+#endif
       if ( result == -1 ) {
 #ifdef TRICKSTER_DEBUG
         _internal::log<_internal::log_levels_t::error>(
@@ -390,15 +414,15 @@ namespace tr {
         return std::nullopt;
       }
 
-      return result == sizeof( T );
+      return result == size;
     }
 
     [[nodiscard]] std::optional<std::uintptr_t> get_call_address( std::uintptr_t address ) const noexcept {
       tr_assert( is_valid( ), tr_string( "Process is invalid." ) );
 
-      auto memory_opt = read_memory<std::uintptr_t>( address + 0x1 );
+      auto memory_opt = read_memory<std::uintptr_t>( address + 0x1, sizeof( std::uint32_t ) );
       if ( memory_opt.has_value( ) ) {
-        return memory_opt.value( ) + ( address + 0x5 );
+        return ( memory_opt.value( ) + ( address + 0x5 ) );
       } else {
 #ifdef TRICKSTER_DEBUG
         _internal::log<_internal::log_levels_t::error>(
@@ -410,13 +434,12 @@ namespace tr {
       }
     }
   };
-
 } // namespace tr
 
 #ifndef TRICKSTER_NO_GLOBALS
 
-using process_t = tr::process_t;
-#define get_modules_list trickster::utils::get_modules
+using tr_process_t = tr::process_t;
+#define tr_get_modules_list trickster::utils::get_modules
 
 #endif
 
