@@ -439,7 +439,7 @@ namespace tr {
 #ifndef TRICKSTER_NO_GLOBALS
 
 using tr_process_t = tr::process_t;
-#define tr_get_modules_list trickster::utils::get_modules
+#define tr_get_modules_list tr::utils::get_modules
 
 #endif
 
