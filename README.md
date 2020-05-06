@@ -2,7 +2,7 @@
 linux memory hacking library
 
 To start using tr, clone this repository  
-and embed `tr.hpp` in source code of  
+and embed `./include/tr.hpp` in source code of  
 your application or use this repository as  
 [git submodule](https://git-scm.com/book/en/v2/Git-Tools-Submodules)
 
@@ -23,32 +23,31 @@ your program with `-DTRICKSTER_DEBUG` compiler flag. (g++)
 #### Example implementation:
 ```cpp
 #include <memory>
+// Enable logging
+#define TRICKSTER_DEBUG
+#include <tr.hpp>
 
-#include "trickster.hpp"
+constexpr std::uintptr_t value_address = 0x7ffce9fb1a34;
 
-int main() {
-  // Create process_t object.
-  auto hack_context = std::make_shared<trickster::process_t>("test");
-
-  // Map memory regions.
-  hack_context->map_memory_regions();
-
-  // Print modules loaded into process memory.
-  for (const auto& module : trickster::utils::get_modules(hack_context->get_memory_regions()))
-    std::cout << module << std::endl;
-
-  // Read int value at 0x7ffce9fb1a34 address.
-  std::cout << "\nread_memory Test: " << hack_context->read_memory<int>(0x7ffce9fb1a34).value_or(-1) << std::endl;
-
-  // Write int with value of 300 at 0x7ffce9fb1a34 address.
-  hack_context->write_memory<int>(0x7ffce9fb1a34, 300);
-
-  // Once again read value at 0x7ffce9fb1a34 address to see, if write above succeed.
-  std::cout << "\nread_memory Test: " << hack_context->read_memory<int>(0x7ffce9fb1a34).value_or(-1) << std::endl;
-  
-  return 0;
+int main( ) {
+  // Create process object
+  auto ctx = std::make_unique<tr_process_t>( "trtest" );
+  // Print its id
+  printf( "%i\n", ctx->get_id( ) );
+  // Map memory regions
+  ctx->map_memory_regions( );
+  // Print modules loaded into process memory (without duplicate segments)
+  for ( const auto & module : tr_get_modules_list( ctx->get_memory_regions( ) ) ) {
+    printf( "%s", module.c_str( ) );
+  }
+  // Read integer value at 0x7ffce9fb1a34
+  const auto read_opt = ctx->read_memory<int>( value_address );
+  if ( read_opt.has_value( ) ) {
+    printf( "%i", read_opt.value( ) );
+  }
+  // Write integer value (20) at 0x7ffce9fb1a34
+  ctx->write_memory( value_address, 20 );
 }
-
 ```
 #### Licensing
-trickster is available under the MIT License.
+tr is available under the MIT License.
