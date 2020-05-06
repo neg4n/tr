@@ -20,6 +20,17 @@
 #include <sys/uio.h>
 
 #define tr_assert( condition, message ) assert( condition && message )
+/**
+ * This macro provides ability to encrypt all trickster's
+ * strings during compilation using heavily vectorized
+ * c++17 compile time string encryption library
+ * (https://github.com/JustasMasiulis/xorstr)
+ */
+#ifdef JM_XORSTR_HPP
+#define tr_string( string ) xorstr_( string )
+#else
+#define tr_string
+#endif
 
 /**
  * trickster - a linux memory hacking library
@@ -102,12 +113,12 @@ namespace trickster {
 
     enum class log_levels_t : std::uint8_t { info = 0, error };
     template <log_levels_t L, typename... Args> void log( std::string_view format, Args... args ) {
-      std::string output { "[trickster] " };
+      std::string output { tr_string( "[trickster] " ) };
       output.append( format );
       if constexpr ( L == log_levels_t::error ) {
-        fprintf( stderr, output.append( "\n" ).c_str( ), args... );
+        fprintf( stderr, output.append( tr_string( "\n" ) ).c_str( ), args... );
       } else if constexpr ( L == log_levels_t::info ) {
-        fprintf( stdout, output.append( "\n" ).c_str( ), args... );
+        fprintf( stdout, output.append( tr_string( "\n" ) ).c_str( ), args... );
       }
     }
 
@@ -128,7 +139,7 @@ namespace trickster {
     inline std::optional<int> get_pid_by_name( std::string_view process_name ) {
       tr_assert( !process_name.empty( ), "Process name is 0 length." );
 
-      for ( const auto & process : std::filesystem::directory_iterator( "/proc/" ) ) {
+      for ( const auto & process : std::filesystem::directory_iterator( tr_string( "/proc/" ) ) ) {
         if ( !process.is_directory( ) )
           continue;
 
@@ -136,7 +147,7 @@ namespace trickster {
           continue;
 
         std::string   line;
-        std::ifstream process_name_fs( process.path( ) / "comm" );
+        std::ifstream process_name_fs( process.path( ) / tr_string( "comm" ) );
         if ( process_name_fs.is_open( ) ) {
           std::getline( process_name_fs, line );
           if ( line == process_name )
@@ -146,7 +157,8 @@ namespace trickster {
 
 #ifdef TRICKSTER_DEBUG
       _internal::log<_internal::log_levels_t::error>(
-          "Could not get '%s' process id. Consider checking if it exists.", process_name.data( ) );
+          tr_string( "Could not get '%s' process id. Consider checking if it exists." ),
+          process_name.data( ) );
 #endif
       return std::nullopt;
     }
@@ -160,7 +172,7 @@ namespace trickster {
      */
     inline std::vector<memory_region_t> map_memory_regions( const int pid ) {
       std::vector<memory_region_t> regions;
-      for ( const auto & process : std::filesystem::directory_iterator( "/proc/" ) ) {
+      for ( const auto & process : std::filesystem::directory_iterator( tr_string( "/proc/" ) ) ) {
         if ( !process.is_directory( ) )
           continue;
 
@@ -169,7 +181,7 @@ namespace trickster {
 
         if ( process.path( ).string( ).erase( 0, 6 ) == std::to_string( pid ) ) {
           std::string   line;
-          std::ifstream process_memory_map_fs( process.path( ) / "maps" );
+          std::ifstream process_memory_map_fs( process.path( ) / tr_string( "maps" ) );
 
           if ( process_memory_map_fs.is_open( ) ) {
             // TODO: Find faster and better way to do it.
@@ -188,10 +200,10 @@ namespace trickster {
               region.end =
                   std::stoul( line.substr( previous_cursor_position + 1, cursor_position ), nullptr, 16 );
 
-              region.readable   = line.substr( cursor_position + 1, 1 ) == "r";
-              region.writable   = line.substr( cursor_position + 2, 1 ) == "w";
-              region.executable = line.substr( cursor_position + 3, 1 ) == "x";
-              region.shared     = line.substr( cursor_position + 4, 1 ) != "p";
+              region.readable   = line.substr( cursor_position + 1, 1 ) == tr_string( "r" );
+              region.writable   = line.substr( cursor_position + 2, 1 ) == tr_string( "w" );
+              region.executable = line.substr( cursor_position + 3, 1 ) == tr_string( "x" );
+              region.shared     = line.substr( cursor_position + 4, 1 ) != tr_string( "p" );
 
               cursor_position += 6;
               previous_cursor_position = cursor_position;
@@ -213,12 +225,13 @@ namespace trickster {
 
               region.inode = std::stol( line.substr( cursor_position + 2, 9 ), nullptr, 16 );
 
-              if ( line.find( ".so" ) != std::string::npos || line.find( '[' ) != std::string::npos ) {
+              if ( line.find( tr_string( ".so" ) ) != std::string::npos ||
+                   line.find( '[' ) != std::string::npos ) {
                 region.special = line.find( '[' ) != std::string::npos;
 
-                region.path = std::filesystem::path { line.erase( 0, 73 ) };
-                region.filename =
-                    region.path.string( ).erase( 0, region.path.string( ).find_last_of( "/" ) + 1 );
+                region.path     = std::filesystem::path { line.erase( 0, 73 ) };
+                region.filename = region.path.string( ).erase(
+                    0, region.path.string( ).find_last_of( tr_string( "/" ) ) + 1 );
               }
 
               regions.push_back( std::move( region ) );
@@ -229,7 +242,8 @@ namespace trickster {
       }
 #ifdef TRICKSTER_DEBUG
       _internal::log<_internal::log_levels_t::error>(
-          "Could not get memory regions of process with %i id. Consider checking if it exists.", pid );
+          tr_string( "Could not get memory regions of process with %i id. Consider checking if it exists." ),
+          pid );
 #endif
       return {};
     }
@@ -253,7 +267,7 @@ namespace trickster {
       modules.reserve( regions.size( ) );
 
       for ( auto & region : regions )
-        if ( region.filename.find( ".so" ) != std::string::npos )
+        if ( region.filename.find( tr_string( ".so" ) ) != std::string::npos )
           modules.push_back( std::move( region.filename ) );
         else
           continue;
@@ -296,7 +310,7 @@ namespace trickster {
      * @return process name.
      */
     [[nodiscard]] std::string_view get_name( ) const noexcept {
-      tr_assert( is_valid( ), "Process is invalid." );
+      tr_assert( is_valid( ), tr_string( "Process is invalid." ) );
       return this->m_name;
     }
 
@@ -307,7 +321,7 @@ namespace trickster {
      * with id provided in function call does not exist.
      */
     [[nodiscard]] const std::vector<memory_region_t> & get_memory_regions( ) const noexcept {
-      tr_assert( is_valid( ), "Process is invalid." );
+      tr_assert( is_valid( ), tr_string( "Process is invalid." ) );
       return this->m_regions;
     }
 
@@ -315,7 +329,7 @@ namespace trickster {
      * Map memory regions.
      */
     void map_memory_regions( ) noexcept {
-      tr_assert( is_valid( ), "Process is invalid." );
+      tr_assert( is_valid( ), tr_string( "Process is invalid." ) );
       this->m_regions = _internal::map_memory_regions( this->m_id );
     }
 
@@ -325,7 +339,7 @@ namespace trickster {
      * @return read data or nullopt if reading fails
      */
     template <typename T> std::optional<T> read_memory( std::uintptr_t address ) const {
-      tr_assert( is_valid( ), "Process is invalid." );
+      tr_assert( is_valid( ), tr_string( "Process is invalid." ) );
 
       T     buffer {};
       iovec local[ 1 ], remote[ 1 ];
@@ -338,7 +352,7 @@ namespace trickster {
       if ( process_vm_readv( this->m_id, local, 1, remote, 1, 0 ) == -1 ) {
 #ifdef TRICKSTER_DEBUG
         _internal::log<_internal::log_levels_t::error>(
-            "Memory reading failed with error code: %i, Message: %s", errno, strerror( errno ) );
+            tr_string( "Memory reading failed with error code: %i, Message: %s" ), errno, strerror( errno ) );
 #endif
         return std::nullopt;
       }
@@ -357,7 +371,7 @@ namespace trickster {
      * of requested bytes, if a partial write occurred.
      */
     template <typename T> std::optional<bool> write_memory( std::uintptr_t address, const T & data ) const {
-      tr_assert( is_valid( ), "Process is invalid." );
+      tr_assert( is_valid( ), tr_string( "Process is invalid." ) );
 
       iovec local[ 1 ], remote[ 1 ];
 
@@ -371,12 +385,29 @@ namespace trickster {
       if ( result == -1 ) {
 #ifdef TRICKSTER_DEBUG
         _internal::log<_internal::log_levels_t::error>(
-            "Memory writing failed with error code: %i, Message: %s", errno, strerror( errno ) );
+            tr_string( "Memory writing failed with error code: %i, Message: %s" ), errno, strerror( errno ) );
 #endif
         return std::nullopt;
       }
 
       return result == sizeof( T );
+    }
+
+    [[nodiscard]] std::optional<std::uintptr_t> get_call_address( std::uintptr_t address ) const noexcept {
+      tr_assert( is_valid( ), tr_string( "Process is invalid." ) );
+      
+      auto memory_opt = read_memory<std::uintptr_t>( address + 0x1 );
+      if ( memory_opt.has_value( ) ) {
+        return memory_opt.value( ) + ( address + 0x5 );
+      } else {
+#ifdef TRICKSTER_DEBUG
+        _internal::log<_internal::log_levels_t::error>(
+            tr_string( "Failed to get call address of %d. If this message is exactly after read memory "
+                       "error, refer to it." ),
+            address );
+#endif
+        return std::nullopt;
+      }
     }
   };
 
