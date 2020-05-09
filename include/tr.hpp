@@ -382,14 +382,16 @@ namespace tr {
       if ( result == -1 ) {
 #ifdef TRICKSTER_DEBUG
         _internal::log<_internal::log_levels_t::error>(
-            tr_string( "Memory reading failed with error code: %i, Message: %s" ), errno, strerror( errno ) );
+            tr_string( "Memory reading (at %p) failed with error code: %i, Message: %s" ),
+            address,
+            errno,
+            strerror( errno ) );
 #endif
         return std::nullopt;
       }
 #ifdef TRICKSTER_DEBUG
       if ( result != size ) {
-        _internal::log<_internal::log_levels_t::info>(
-            tr_string( "Partial read occured." ), errno, strerror( errno ) );
+        _internal::log<_internal::log_levels_t::info>( tr_string( "Partial read occured." ) );
       }
 #endif
       return _internal::read_result_t<T> { buffer, size, result };
@@ -423,14 +425,16 @@ namespace tr {
       if ( result == -1 ) {
 #ifdef TRICKSTER_DEBUG
         _internal::log<_internal::log_levels_t::error>(
-            tr_string( "Memory writing failed with error code: %i, Message: %s" ), errno, strerror( errno ) );
+            tr_string( "Memory writing (at %p) failed with error code: %i, Message: %s" ),
+            address,
+            errno,
+            strerror( errno ) );
 #endif
         return std::nullopt;
       }
 #ifdef TRICKSTER_DEBUG
       if ( result != size ) {
-        _internal::log<_internal::log_levels_t::info>(
-            tr_string( "Partial write occured." ), errno, strerror( errno ) );
+        _internal::log<_internal::log_levels_t::info>( tr_string( "Partial write occured." ) );
       }
 #endif
       return _internal::write_result_t<T> { size, result };
